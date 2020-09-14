@@ -4,6 +4,8 @@ woohoo! visit https://sushi.nataliewee.com/ to play!
 
 <img src="https://media.giphy.com/media/LkNVnsg7g30Qe4kfdw/giphy.gif" alt="sushigif">
 
+the client/ directory is a git submodule located here: https://github.com/natalieweesh/sushigo-client
+
 ## to run the client
 
 from the client/ directory run `npm start`
