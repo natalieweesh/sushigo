@@ -1,6 +1,8 @@
-### Sushi Go
+# Sushi Go
 
-woohoo
+woohoo! visit https://sushi.nataliewee.com/ to play!
+
+<img src="https://media.giphy.com/media/LkNVnsg7g30Qe4kfdw/giphy.gif" alt="sushigif">
 
 ## to run the client
 
