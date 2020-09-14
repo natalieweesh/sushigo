@@ -10,15 +10,21 @@ the client/ directory is a git submodule located here: https://github.com/natali
 
 from the client/ directory run `npm start`
 
+it should open up `localhost:3000` for you
+
 ## to run the server
 
 from the server/ directory run `npm start`
+
+the server will run on `localhost:5000`
 
 ## to run with the server locally
 
 make sure in client/src/components/Game/Game.js you comment ouy line 32 and uncomment line 31 which sends `ENDPOINT` to localhost:5000
 
 ## to deploy the frontend
+
+make sure you changed the ENDPOINT in client/src/components/Game/Game.js back from localhost to the heroku url
 
 first run `npm run build`
 
