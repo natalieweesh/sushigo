@@ -116,13 +116,8 @@ const setReadyToPlay = (id) => {
 }
 
 const setReadyToRestart = (id) => {
-  console.log('setReadyToRestart: id', id)
-  let myUser = users.find((user) => {
-    user.id === id
-  })
   users.find((user) => user.id === id).readyToRestart = true;
   console.log(users.find((user) => user.id === id).readyToRestart)
-  console.log('myuser', myUser)
 }
 
 const setAllNotReadyToRestart = (room) => {

@@ -105,7 +105,6 @@ io.on('connection', (socket) => {
   socket.on('moveTile', ({el, x, y, settingUp}, callback) => {
     try {
       const user = getUser(socket.id);
-      console.log('in movetile socket', user, el, x, y, settingUp)
       updateTile(user.room, el, x, y, user);
       io.to(user.room).emit('tileMoved', {room: user.room, el, x, y, user: user, settingUp: settingUp});
       // io.to(user.room).emit('gameStatus', { room: user.room, game: getGame(user.room) })
@@ -182,27 +181,33 @@ io.on('connection', (socket) => {
     }
   })
 
-  socket.on('setReadyToRestart', ({cards}, callback) => {
+  socket.on('setReadyToRestart', ({cards, newGameOf3}, callback) => {
     try {
       const user = getUser(socket.id);
       setReadyToRestart(socket.id);
-
+      console.log('setting ready to restart', cards.length)
       io.to(user.room).emit('roomData', { room: user.room, users: getUsersInRoom(user.room) });
 
       //check if all users in room have set ready to restart
       if (checkAllReadyToRestart(user.room)) {
-
+        console.log('all ready to restart!')
         let prevScores = getGame(user.room).scores;
         let prevPuddings = getGame(user.room).puddingCounts;
-        console.log('prevscores', prevScores)
-        console.log('prevpuddings', prevPuddings)
+        let prevGameNumber = getGame(user.room).gameNumber;
+        let leftoverCards = getGame(user.room).leftoverCards;
         restartGame(user.room, getUsersInRoom(user.room));
-        const games = addGame(user.room, getUsersInRoom(user.room), prevScores, prevPuddings)
+        let games;
+        if (newGameOf3) {
+          games = addGame(user.room, getUsersInRoom(user.room));
+        } else {
+          games = addGame(user.room, getUsersInRoom(user.room), prevScores, prevPuddings, leftoverCards, prevGameNumber);
+        }
         let currentGame = getGame(user.room);
         if (currentGame && currentGame.cards.length === 0) {
-          dealCards(user.room, shuffle(cards));
+          dealCards(user.room, shuffle(cards), leftoverCards);
         }
         io.to(user.room).emit('gameRestarted', {room: user.room, users: getUsersInRoom(user.room)})
+        io.to(user.room).emit('roomData', { room: user.room, users: getUsersInRoom(user.room) });
         setAllNotReadyToRestart(user.room);
         if (!!games) {
           io.to(user.room).emit('roomData', { room: user.room, users: getUsersInRoom(user.room) });
@@ -259,8 +264,6 @@ io.on('connection', (socket) => {
       const user = getUser(socket.id);
       let prevScores = getGame(user.room).scores;
       let prevPuddings = getGame(user.room).puddingCounts;
-      console.log('prevscores', prevScores)
-      console.log('prevpuddings', prevPuddings)
       restartGame(user.room, getUsersInRoom(user.room));
       const games = addGame(user.room, getUsersInRoom(user.room), prevScores, prevPuddings)
       io.to(user.room).emit('gameRestarted', {room: user.room, users: getUsersInRoom(user.room)})
@@ -289,7 +292,6 @@ io.on('connection', (socket) => {
       const user = scheduleRemoveUser(socket.id);
 
       if (user) {
-        console.log('disconnect user', user.name, socket.id)
         if (getUsersInRoom(user.room).length === 0) { //there is a room and you are the only user left
           console.log('remove the last user from the room')
           removeGame(user.room)

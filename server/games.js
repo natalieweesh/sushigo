@@ -3,10 +3,7 @@ let games = [];
 // map of room names to interval IDs
 let pendingRemovals = {};
 
-const addGame = (room, users, scores, puddingCounts) => {
-  
-  // console.log('room', room)
-  // console.log('find anything?', games.find((game) => game.id == room))
+const addGame = (room, users, scores, puddingCounts, leftoverCards, prevGameNumber) => {
   if (games.find((game) => game.id == room)) {
     console.log('already started game with id', room)
     return;
@@ -23,11 +20,11 @@ const addGame = (room, users, scores, puddingCounts) => {
     scores: scores || null,
     puddingCounts: puddingCounts || null,
     userCount: users.length,
-    handSize: null
+    handSize: null,
+    gameNumber: prevGameNumber ? parseInt(prevGameNumber) + 1 : 1,
+    leftoverCards: leftoverCards || []
   }
   games.push(newGame)
-  console.log('games', games);
-  console.log('users', users)
   return games;
 }
 
@@ -38,13 +35,10 @@ const checkRoundFinished = (room) => {
 
 const restartGame = (room, users) => {
   const gameToRemove = games.findIndex((game) => game.id == room);
-  console.log('game to remove', gameToRemove)
   if (gameToRemove === -1) {
     return
   }
-  console.log('games length', games.length)
   games.splice(gameToRemove, 1);
-  console.log('games length after', games.length)
   users.map((u) => {
     u.answerSubmitted = false;
   })
@@ -77,36 +71,29 @@ const updatePuddingCount = (room, userIndex, puddingCount) => {
 const dealCards = (room, cards) => {
   let game = games.find((game) => game.id === room);
   game.cards = cards;
-  let cardsCopy = cards.slice();
-  let puddingsUsed = game.puddingCounts ? game.puddingCounts.reduce((a, b) => a + b, 0) : 0;
-  if (puddingsUsed > 0) { // remove used puddings from cards
-    for (let i=0; i < puddingsUsed; i++) {
-      let puddingIdx = cardsCopy.findIndex((c) => c.type === 'pudding');
-      cardsCopy.splice(puddingIdx, 1);
-    }
-  }
+  let cardsCopy = game.leftoverCards.length > 0 ? game.leftoverCards.slice() : game.cards.slice();
   let numUsers = game.userCount;
   let cardsPerPile;
   if (numUsers === 2) {
     cardsPerPile = 10;
     game.hands = [[], []];
-    game.scores = [0, 0];
-    game.puddingCounts = [0, 0];
+    game.scores = game.scores ? game.scores.map((s) => parseInt(s)) : [0, 0];
+    game.puddingCounts = game.puddingCounts ? game.puddingCounts.map((c) => parseInt(c)) : [0, 0];
   } else if (numUsers === 3) {
     cardsPerPile = 9;
     game.hands = [[], [], []];
-    game.scores = game.scores || [0, 0, 0];
-    game.puddingCounts = game.puddingCounts || [0, 0, 0];
+    game.scores = game.scores ? game.scores.map((s) => parseInt(s)) : [0, 0, 0];
+    game.puddingCounts = game.puddingCounts ? game.puddingCounts.map((c) => parseInt(c)) : [0, 0, 0];
   } else if (numUsers === 4) {
     cardsPerPile = 8;
     game.hands = [[], [], [], []];
-    game.scores = game.scores || [0, 0, 0, 0];
-    game.puddingCounts = game.puddingCounts || [0, 0, 0, 0];
+    game.scores = game.scores ? game.scores.map((s) => parseInt(s)) : [0, 0, 0, 0];
+    game.puddingCounts = game.puddingCounts ? game.puddingCounts.map((c) => parseInt(c)) : [0, 0, 0, 0];
   } else {
     cardsPerPile = 7;
     game.hands = [[], [], [], [], []];
-    game.scores = game.scores || [0, 0, 0, 0, 0];
-    game.puddingCounts = game.puddingCounts || [0, 0, 0, 0, 0];
+    game.scores = game.scores ? game.scores.map((s) => parseInt(s)) : [0, 0, 0, 0, 0];
+    game.puddingCounts = game.puddingCounts ? game.puddingCounts.map((c) => parseInt(c)) : [0, 0, 0, 0, 0];
   }
   game.handSize = cardsPerPile;
   let piles = [];
@@ -119,13 +106,12 @@ const dealCards = (room, cards) => {
     }
   }
   game.piles = piles;
+  game.leftoverCards = cardsCopy;
   return game;
 }
 
 const updateTile = (room, id, x, y, user) => {
-  console.log('Update Tile', id, x, y)
   let game = games.find((game) => game.id === room);
-  // console.log('user?', user)
   if (game && game.cards) {
     card = game.cards.find((card) => card.id === id);
     card.x = x;
@@ -133,7 +119,6 @@ const updateTile = (room, id, x, y, user) => {
     card.user = user;
   }
   if (game && game.hands) {
-    // console.log("hands?", game.hands)
     card = game.hands[user.orderIndex].find((card) => card.id === id);
     if (card) {
       card.x = x;
@@ -142,10 +127,7 @@ const updateTile = (room, id, x, y, user) => {
     }
   }
   if (game && game.piles) {
-    // console.log('piles??', game.piles)
-    // console.log('indexxx', (user.orderIndex + game.currentRound) % game.userCount);
     card = game.piles[(user.orderIndex + game.currentRound) % game.userCount].find((card) => card.id === id);
-    // console.log("CARD", card)
     if (card) {
       card.x = x;
       card.y = y;
@@ -156,17 +138,11 @@ const updateTile = (room, id, x, y, user) => {
 
 const updateCard = (room, userIndex, cardsInHand, cardsInPile) => {
   let game = games.find((game) => game.id === room);
-  console.log('updateCard in room', game)
 
   if (game && game.hands) {
-    console.log('hands??', cardsInHand)
     game.hands[userIndex] = cardsInHand;
   }
   if (game && game.piles) {
-    console.log('pile???', cardsInPile)
-    console.log(
-      'pile index to update', (userIndex + game.currentRound) % game.userCount
-    )
     game.piles[(userIndex + game.currentRound) % game.userCount] = cardsInPile;
   }
   return game;
@@ -190,32 +166,27 @@ const removeGame = (room) => {
   const index = games.findIndex((game) => game.id === room);
 
   if (index !== -1) {
-    console.log('games before deleting', games)
     games.splice(index, 1)[0];
-    console.log('games after deleting', games)
   }
 }
 
 const scheduleRemoveGame = (room, getUsersInRoom) => {
   let intervalId = setInterval(() => {
-    console.log('deleting this room', room);
     const index = games.findIndex((game) => game.id === room);
 
     if (index !== -1) {
       const users = getUsersInRoom(room)
       if (users.length > 0) {
-        console.log('there are still users in the room so do not delete it')
         return;
       } else {
         //delete the room for real
-        console.log('games before deleting', games)
+        console.log('deleting this room for real:', room.id)
         games.splice(index, 1)[0];
         let intervalToStop = pendingRemovals[room];
         if (intervalToStop) {
           clearInterval(intervalToStop);
           delete pendingRemovals[room];
         }
-        console.log('games after deleting', games)
       }
     }
 
